@@ -1,7 +1,6 @@
-import pandas as pd
 import matplotlib.pyplot as plt
-data = pd.read_csv(
-    "C:/Users/soghr/ML_Project/Mastery_project/data_cleaned.csv")
+import Feature_engineering
+data = Feature_engineering.user_features
 
 plt.figure(figsize=(10, 6))
 # Drop NaNs before plotting the histogram to only show valid durations
