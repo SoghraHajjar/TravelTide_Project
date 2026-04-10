@@ -20,7 +20,7 @@ However, incentives (e.g., discounts) come with a cost, so the strategy must als
 
 ---
 
-## 🧠 Solution Approach
+##  Solution Approach
 
 This project combines **analytics, machine learning, and business logic**:
 
