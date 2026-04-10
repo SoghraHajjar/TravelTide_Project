@@ -97,7 +97,8 @@ perk_signals['score_free_cancellation'] = 0.7*perk_signals['cancel_urgency']
 
 perk_signals['score_free_checkedbag'] = 0.8*perk_signals['ave_bags_normalized'] + \
     0.2 * perk_signals['p_flight_booking']
-perk_signals['score_exclusive_discount'] = perk_signals['discount_effectiveness']
+perk_signals['score_exclusive_discount'] = \
+    perk_signals['discount_effectiveness']
 
 perk_signals['score_free_meal'] = 0.7*perk_signals['trip_nights_normalized'] + \
     0.3 * perk_signals['p_hotel_booking']
@@ -122,7 +123,13 @@ print(perk_signals['top_perk'].value_counts())
 
 # Save the DataFrame to CSV-format file
 output_path = (
-    'C:/Users/soghr/TravelTide_Project/datasets/perk_signals.csv'
+    'C:/Users/soghr/TravelTide_Project/datasets/perk_signals_data.csv'
 )
-perk_signals = pd.DataFrame(perk_signals)
-perk_signals.to_csv(output_path, encoding="utf-8", index=False)
+perk_signals_data = pd.DataFrame(perk_signals[['user_id', 'Monetary_title',
+                                               'score_exclusive_discount',
+                                               'score_free_cancellation',
+                                               'score_free_checkedbag',
+                                               'score_free_meal',
+                                               'score_free_night_flight',
+                                               'top_perk']])
+perk_signals_data.to_csv(output_path, encoding="utf-8", index=False)

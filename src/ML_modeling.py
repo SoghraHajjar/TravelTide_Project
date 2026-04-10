@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 # 2. Load Data
 # ================================
 data = pd.DataFrame(pd.read_csv(
-    "C:/Users/soghr/TravelTide_Project/Mastery_project/merged_data.csv"))
+    "C:/Users/soghr/TravelTide_Project/datasets/merged_data.csv"))
 # data_features = pd.DataFrame(pd.read_csv(
 #    'C:/Users/soghr/TravelTide_Project/Mastery_project/user_features.csv'))
 # data = data.merge(
@@ -45,10 +45,7 @@ data['booked_both'] = np.where(
     (data['flight_booked'] == 1) & (data['hotel_booked'] == 1), 1, 0)
 data['discount_any'] = np.where(
     (data['flight_discount'] == 1) | (data['hotel_discount'] == 1), 1, 0)
-data['destination_country'] = np.where(
-    data['destination_country'] == 'usa', 1,
-    np.where(data['destination_country'] == 'canada', 2, 0)
-)
+
 data['married'] = np.where(data['married'] == 1.0, 1, 0)
 data['has_children'] = np.where(
     data['has_children'] == 1.0, 1, 0)
@@ -62,32 +59,41 @@ TREATMENT = "hotel_discount"
 # Features
 FEATURES = [
     "session_duration",
-    'base_fare_usd',
+    'page_clicks',
     "age",
     "married",
     "has_children"
 ]
-df = data[FEATURES + [TARGET, TREATMENT]].copy()
-df = df.fillna(0)
+# Bring user_id in early (as suggested earlier)
+df = data[FEATURES + [TARGET, TREATMENT, 'user_id']].copy()
+# df['hotel_per_room_usd'] = df['hotel_per_room_usd'].fillna(
+#    df['hotel_per_room_usd'].median())
+
 # Drop missing values (simple approach)
 # df = df.dropna(subset=FEATURES + [TARGET, TREATMENT])
 # print(df.describe)
 # ================================
 # 4. Split Data
 # ================================
+df_train, df_test = train_test_split(df, test_size=0.3, random_state=42)
+df_train = df_train.copy()
+df_test = df_test.copy()
 
-df_treat = df[df[TREATMENT] == 1]
-df_control = df[df[TREATMENT] == 0]
+df_train_treat = df_train[df_train[TREATMENT] == 1]
+df_train_control = df_train[df_train[TREATMENT] == 0]
 
-print("Treatment size:", len(df_treat))
-print("Control size:", len(df_control))
+df_test_treat = df_test[df_test[TREATMENT] == 1]
+df_test_control = df_test[df_test[TREATMENT] == 0]
+
+print("Treatment size:", len(df_train_treat))
+print("Control size:", len(df_train_control))
 # ================================
 # 5. Train Models
 # ================================
 
 # --- Treatment Model ---
-X_treat = df_treat[FEATURES]
-y_treat = df_treat[TARGET]
+X_train_treat = df_train_treat[FEATURES]
+y_train_treat = df_train_treat[TARGET]
 
 model_treat = RandomForestClassifier(
     n_estimators=100,
@@ -95,12 +101,12 @@ model_treat = RandomForestClassifier(
     random_state=42
 )
 
-model_treat.fit(X_treat, y_treat)
+model_treat.fit(X_train_treat, y_train_treat)
 
 
 # --- Control Model ---
-X_control = df_control[FEATURES]
-y_control = df_control[TARGET]
+X_train_control = df_train_control[FEATURES]
+y_train_control = df_train_control[TARGET]
 
 model_control = RandomForestClassifier(
     n_estimators=100,
@@ -108,45 +114,63 @@ model_control = RandomForestClassifier(
     random_state=42
 )
 
-model_control.fit(X_control, y_control)
+model_control.fit(X_train_control, y_train_control)
 # ================================
 # 6. Predict Probabilities
 # ================================
 
-X_all = df[FEATURES]
+X_test = df_test[FEATURES]
 
 # Probability of booking WITH discount
-p_treat = model_treat.predict_proba(X_all)[:, 1]
+p_treat = model_treat.predict_proba(X_test)[:, 1]
 # print(p_treat)
 # Probability of booking WITHOUT discount
-p_control = model_control.predict_proba(X_all)[:, 1]
+p_control = model_control.predict_proba(X_test)[:, 1]
 
-df["p_treat"] = p_treat
-df["p_control"] = p_control
+df_test["p_treat"] = p_treat
+df_test["p_control"] = p_control
 # ================================
 # 7. Uplift Calculation
 # ================================
 
-df["uplift"] = df["p_treat"] - df["p_control"]
+df_test["uplift"] = df_test["p_treat"] - df_test["p_control"]
 
-df[["p_treat", "p_control", "uplift"]].head()
+df_test[["p_treat", "p_control", "uplift"]].head()
+# =================
+# Evaluate model performance
+
+y_test_treat = df_test_treat[TARGET]
+X_test_treat = df_test_treat[FEATURES]
+# On held-out treated users (if you reserve some)
+print("AUC for Treatment Model:", roc_auc_score(y_test_treat,
+      model_treat.predict_proba(X_test_treat)[:, 1]))
+y_test_control = df_test_control[TARGET]
+X_test_control = df_test_control[FEATURES]
+print("AUC for Control Model:", roc_auc_score(y_test_control,
+      model_control.predict_proba(X_test_control)[:, 1]))
+
 # ================================
 # 8. Uplift Segmentation
 # ================================
 
 
-df["uplift_segment"] = pd.qcut(
-    df["uplift"],
-    q=4,
-    labels=["Do Not Disturb", "Lost Cause", "Sure Thing", "Persuadable"]
-)
+def categorical_segment(row):
+    if row['uplift'] > 0.08:  # Threshold for meaningful impact
+        return 'Persuadable'
+    elif row['uplift'] < -0.05:
+        return 'Sleeping Dog'
+    elif row['p_control'] > 0.7:
+        return 'Sure Thing'
+    else:
+        return 'Lost Cause'
 
-df["uplift_segment"].value_counts()
+
+df_test["uplift_segment"] = df_test.apply(categorical_segment, axis=1)
 # ================================
 # 9. Compare Conversion by Segment
 # ================================
 
-segment_performance = df.groupby("uplift_segment")[TARGET].mean()
+segment_performance = df_test.groupby("uplift_segment")[TARGET].mean()
 
 print(segment_performance)
 # ================================
@@ -154,7 +178,7 @@ print(segment_performance)
 # ================================
 
 plt.figure()
-plt.hist(df["uplift"], bins=50)
+plt.hist(df_test["uplift"], bins=50)
 plt.title("Uplift Distribution")
 plt.xlabel("Uplift")
 plt.ylabel("Frequency")
@@ -164,10 +188,10 @@ plt.show()
 # ================================
 
 # Sort by uplift
-df_sorted = df.sort_values(by="uplift", ascending=False)
+df_sorted = df_test.sort_values(by="uplift", ascending=False)
 
 # Top 20% users
-top_20 = df_sorted.head(int(0.2 * len(df)))
+top_20 = df_sorted.head(int(0.2 * len(df_test)))
 
 print("Average uplift (top 20%):", top_20["uplift"].mean())
 print("Conversion rate (top 20%):", top_20[TARGET].mean())
@@ -176,7 +200,8 @@ print("Conversion rate (top 20%):", top_20[TARGET].mean())
 # ================================
 
 # Sort by predicted uplift (descending)
-df_sorted = df.sort_values(by="uplift", ascending=False).reset_index(drop=True)
+df_sorted = df_test.sort_values(
+    by="uplift", ascending=False).reset_index(drop=True)
 
 # Create bins (percentiles)
 n_bins = 20
@@ -215,7 +240,8 @@ plt.show()
 # ================================
 
 # Sort by uplift
-df_qini = df.sort_values(by="uplift", ascending=False).reset_index(drop=True)
+df_qini = df_test.sort_values(
+    by="uplift", ascending=False).reset_index(drop=True)
 
 # Total number of samples
 N = len(df_qini)
@@ -242,8 +268,8 @@ x = np.arange(1, N+1) / N
 # ----------------
 # Random baseline
 # ----------------
-overall_treat_rate = df[df[TREATMENT] == 1][TARGET].mean()
-overall_control_rate = df[df[TREATMENT] == 0][TARGET].mean()
+overall_treat_rate = df_test[df_test[TREATMENT] == 1][TARGET].mean()
+overall_control_rate = df_test[df_test[TREATMENT] == 0][TARGET].mean()
 
 random_uplift = (overall_treat_rate - overall_control_rate) * np.arange(1, N+1)
 
@@ -262,52 +288,66 @@ plt.legend()
 
 plt.show()
 
-# Train on full data
+# Train on test data
 model_base = RandomForestClassifier(
     n_estimators=100, max_depth=6, random_state=42)
 
-model_base.fit(df[FEATURES], df[TARGET])
+model_base.fit(df_train[FEATURES], df_train[TARGET])
 
-df["p_book"] = model_base.predict_proba(df[FEATURES])[:, 1]
-df["p_treat"]     # booking with discount
-df["p_control"]   # booking without discount
-df["uplift"]      # difference
+df_test["p_book"] = model_base.predict_proba(df_test[FEATURES])[:, 1]
+df_test["p_treat"]     # booking with discount
+df_test["p_control"]   # booking without discount
+df_test["uplift"]      # difference
+
+# ================================
+# aggregate to user-level
+# ================================
+user_df = df_test.groupby('user_id').agg(
+    p_treat=('p_treat', 'mean'),
+    p_control=('p_control', 'mean'),
+    uplift=('uplift', 'mean'),
+    p_book=('p_book', 'mean'),
+    hotel_booked=(TARGET, 'max'),       # did they ever book?
+    hotel_discount=(TREATMENT, 'max'),  # did they ever get a discount?
+).reset_index()
+
+
 # ================================
 # Decision Engine
 # ================================
 COST_DISCOUNT = 15
 REVENUE_BOOKING = 100
 
-df["expected_value"] = (
-    df["uplift"] * REVENUE_BOOKING - COST_DISCOUNT
+user_df["expected_value"] = (
+    user_df["uplift"] * REVENUE_BOOKING - COST_DISCOUNT
 )
 
 
 def assign_reward(row):
-
-    # ROI-driven decision
-    if row["expected_value"] > 0:
-        return "Give Discount"
-
-    elif row["p_book"] >= 0.7:
+    # Already likely to book — don't waste the discount
+    if row["p_book"] >= 0.7:
         return "No Discount (Sure Thing)"
-
+    # Discount generates positive ROI for uncertain users
+    elif row["expected_value"] > 0:
+        return "Give Discount"
+    # Discount actively hurts conversion
     elif row["uplift"] < 0:
         return "Avoid (Do Not Disturb)"
-
     else:
         return "Low Priority"
 
 
-df["decision"] = df.apply(assign_reward, axis=1)
-print(df["decision"].value_counts())
+user_df["decision"] = user_df.apply(assign_reward, axis=1)
+print(user_df["decision"].value_counts())
 # Compare conversion rates by decision
-df.groupby("decision")[TARGET].mean()
+print('Conversion rates by decision:')
+print(user_df.groupby("decision")[TARGET].mean())
 
-df['user_id'] = data['user_id']
-df = df.round(2)
+float_cols = user_df.select_dtypes(include='float').columns
+user_df[float_cols] = user_df[float_cols].round(2)
+user_df = pd.DataFrame(user_df[['user_id', 'decision']])
 # Save the DataFrame to CSV-format file
 output_path = (
-    'C:/Users/soghr/TravelTide_Project/datasets/uplift_decision_results.csv'
+    'C:/Users/soghr/TravelTide_Project/datasets/uplift_decision_per_user.csv'
 )
-df.to_csv(output_path, index=False)
+user_df.to_csv(output_path, index=False)
