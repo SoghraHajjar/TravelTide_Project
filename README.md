@@ -171,7 +171,7 @@ python uplift_model.py
 
 ## 👩‍💻 About Me
 
-I’m a data analyst with a background in biostatistics, focused on applying statistical and machine learning methods to real-world problems.
+I’m a data analyst with a background in statistics, focused on applying statistical and machine learning methods to real-world problems.
 
 This project reflects my ability to:
 
