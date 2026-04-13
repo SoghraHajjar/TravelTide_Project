@@ -80,7 +80,6 @@ Customers are targeted only if the **expected value is positive**, ensuring effi
 An interactive dashboard was built in Tableau to simulate business scenarios:
 
 * Adjustable parameters:
-
   * Cost of discount
   * Revenue per booking
 * Real-time decision updates
@@ -89,32 +88,93 @@ An interactive dashboard was built in Tableau to simulate business scenarios:
 
 ---
 
-## 📊 Key Insights
+### 6. Perk Scoring & Recommendation System
 
-* Not all customers should receive discounts
-* A large portion of users are **“Sure Things”** → discounts waste money
-* Targeting only **high-uplift users** significantly improves ROI
-* Personalization is critical for increasing conversion rates
+To further enhance personalization, a **perk scoring system** was developed to assign each user the most relevant incentive beyond just discounts.
 
----
+#### 🔍 Idea
 
-## 🛠️ Tech Stack
+Instead of only deciding *whether* to give a discount, we answer:
 
-* **Python**: pandas, numpy, scikit-learn
-* **SQL**: data filtering and feature engineering
-* **Tableau**: dashboard & decision visualization
-* **GitHub**: version control and project documentation
+> **What type of perk is best for each user?**
 
 ---
 
-## 📁 Project Structure
+#### ⚙️ Method
 
-```
+1. **Behavioral signals** were extracted:
+
+* Booking probability  
+* Discount responsiveness  
+* Cancellation behavior  
+* Trip characteristics (nights, baggage)
+
+2. **Discount effectiveness** was calculated:
+
+[
+\text{Discount Effectiveness} = P(\text{booking | discount}) - P(\text{booking | no discount})
+]
+
+3. Features were **normalized (min-max scaling)** to ensure comparability.
+
+---
+
+#### 🎯 Perk Scoring Logic
+
+Each user receives scores for multiple perks:
+
+| Perk | Logic |
+|------|------|
+| 🛑 Free Cancellation | High urgency + high cancellation rate |
+| 🧳 Free Checked Bag | Frequent baggage usage + flight preference |
+| 💸 Exclusive Discount | High discount responsiveness |
+| 🍽️ Free Meal | Longer stays + hotel preference |
+| ✈️🏨 Free Night/Flight | High booking probability + longer trips |
+
+Example:
+
+```python
+perk_signals['score_free_cancellation'] = (
+    0.7 * perk_signals['cancel_urgency'] +
+    0.3 * perk_signals['cancellation_rate']
+)
+🧠 Final Recommendation
+
+Each user is assigned their top perk:
+
+perk_signals["top_perk"] = perk_signals[score_cols].idxmax(axis=1)
+📊 Output
+output/perk_signals_data.csv
+
+Contains:
+
+user_id
+user segment
+perk scores
+✅ recommended top_perk
+💡 Insight
+
+This extends the strategy from:
+
+➡️ "Who should receive a discount?"
+to
+➡️ "What is the best incentive for each user?"
+
+📊 Key Insights
+Not all customers should receive discounts
+A large portion of users are “Sure Things” → discounts waste money
+Targeting only high-uplift users significantly improves ROI
+Personalization is critical for increasing conversion rates
+🛠️ Tech Stack
+Python: pandas, numpy, scikit-learn
+SQL: data filtering and feature engineering
+Tableau: dashboard & decision visualization
+GitHub: version control and project documentation
+📁 Project Structure
 TravelTide_Project/
 │
 ├── data/
 │   └── merged_data.csv
-│
 │
 ├── src/
 │   └── data_merging.py
@@ -126,52 +186,32 @@ TravelTide_Project/
 │
 ├── output/
 │   └── uplift_decision.csv
+│   └── perk_signals_data.csv
 │
 ├── dashboard/
 │   └── tableau_dashboard.twbx
 │
+├── images/
+│   └── segmentation_pipeline.png
+│
 └── README.md
-```
-
----
-
-## 🚀 How to Run
-
-1. Clone the repository:
-
-```bash
+🚀 How to Run
+Clone the repository:
 git clone https://github.com/SoghraHajjar/traveltide-project.git
-```
-
-2. Install dependencies:
-
-```bash
+Install dependencies:
 pip install -r requirements.txt
-```
-
-3. Run the model:
-
-```bash
+Run the model:
 python uplift_model.py
-```
+Open Tableau dashboard:
+Load uplift_decision.csv
+Adjust parameters to simulate decisions
+💡 Key Takeaway
 
-4. Open Tableau dashboard:
+Instead of giving discounts to all users, this project demonstrates how uplift modeling + ROI optimization + perk personalization can target the right customers with the right incentive—maximizing conversions while minimizing cost.
 
-* Load `uplift_decision.csv`
-* Adjust parameters to simulate decisions
+👩‍💻 About Me
 
----
-
-## 💡 Key Takeaway
-
-> Instead of giving discounts to all users, this project demonstrates how **uplift modeling + ROI optimization** can target only the customers who are truly influenced—maximizing conversions while minimizing cost.
-
-
----
-
-## 👩‍💻 About Me
-
-I’m a data analyst with a background in biostatistics, focused on applying statistical and machine learning methods to real-world problems.
+I’m a data analyst with a background in statistics, focused on applying statistical and machine learning methods to real-world problems.
 
 This project reflects my ability to:
 
@@ -179,3 +219,4 @@ Think critically about data
 Apply the right method for the right question
 Bridge the gap between analysis and business decisions
 
+---
