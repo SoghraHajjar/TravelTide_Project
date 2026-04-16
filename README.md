@@ -1,6 +1,6 @@
-# ✈️ TravelTide: Customer Personalization & Uplift Modeling
+# TravelTide: Customer Personalization & Uplift Modeling
 
-## 📌 Overview
+## Overview
 
 TravelTide is a fast-growing e-booking startup that offers one of the largest travel inventories in the market. While the platform excels in search and availability, customer retention remains a key challenge.
 
@@ -8,7 +8,7 @@ This project focuses on designing a **data-driven, personalized rewards strategy
 
 ---
 
-## 🎯 Business Problem
+## Business Problem
 
 The marketing team, led by Elena Tarrant (Head of Marketing), aims to launch a **personalized rewards program**.
 
@@ -92,7 +92,7 @@ An interactive dashboard was built in Tableau to simulate business scenarios:
 
 To further enhance personalization, a **perk scoring system** was developed to assign each user the most relevant incentive beyond just discounts.
 
-#### 🔍 Idea
+#### Idea
 
 Instead of only deciding *whether* to give a discount, we answer:
 
@@ -100,7 +100,7 @@ Instead of only deciding *whether* to give a discount, we answer:
 
 ---
 
-#### ⚙️ Method
+#### Method
 
 1. **Behavioral signals** were extracted:
 
@@ -119,7 +119,7 @@ Instead of only deciding *whether* to give a discount, we answer:
 
 ---
 
-#### 🎯 Perk Scoring Logic
+#### Perk Scoring Logic
 
 Each user receives scores for multiple perks:
 
@@ -138,12 +138,12 @@ perk_signals['score_free_cancellation'] = (
     0.7 * perk_signals['cancel_urgency'] +
     0.3 * perk_signals['cancellation_rate']
 )
-🧠 Final Recommendation
+Final Recommendation
 
 Each user is assigned their top perk:
 
 perk_signals["top_perk"] = perk_signals[score_cols].idxmax(axis=1)
-📊 Output
+ Output
 output/perk_signals_data.csv
 
 Contains:
@@ -151,8 +151,8 @@ Contains:
 user_id
 user segment
 perk scores
-✅ recommended top_perk
-💡 Insight
+ recommended top_perk
+ Insight
 
 This extends the strategy from:
 
@@ -160,12 +160,12 @@ This extends the strategy from:
 to
 ➡️ "What is the best incentive for each user?"
 
-📊 Key Insights
+Key Insights
 Not all customers should receive discounts
 A large portion of users are “Sure Things” → discounts waste money
 Targeting only high-uplift users significantly improves ROI
 Personalization is critical for increasing conversion rates
-🛠️ Tech Stack
+ Tech Stack
 Python: pandas, numpy, scikit-learn
 SQL: data filtering and feature engineering
 Tableau: dashboard & decision visualization
@@ -195,7 +195,7 @@ TravelTide_Project/
 │   └── segmentation_pipeline.png
 │
 └── README.md
-🚀 How to Run
+ How to Run
 Clone the repository:
 git clone https://github.com/SoghraHajjar/traveltide-project.git
 Install dependencies:
@@ -209,7 +209,7 @@ Adjust parameters to simulate decisions
 
 Instead of giving discounts to all users, this project demonstrates how uplift modeling + ROI optimization + perk personalization can target the right customers with the right incentive—maximizing conversions while minimizing cost.
 
-👩‍💻 About Me
+ About Me
 
 I’m a data analyst with a background in statistics, focused on applying statistical and machine learning methods to real-world problems.
 
